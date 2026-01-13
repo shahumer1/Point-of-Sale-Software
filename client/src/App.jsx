@@ -70,6 +70,11 @@ import Dashboard from './pages/Dashboard';
 import POS from './pages/POS';
 import Products from './pages/Products';
 import Customers from './pages/Customers';
+import CustomerDetail from './pages/CustomerDetail';
+import CustomerLedger from './pages/CustomerLedger';
+import Vendors from './pages/Vendors';
+import VendorDetail from './pages/VendorDetail';
+import VendorLedger from './pages/VendorLedger';
 import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
@@ -105,6 +110,8 @@ function App() {
                     <Route path="pos" element={<POS />} />
                     <Route path="products" element={<Products />} />
                     <Route path="customers" element={<Customers />} />
+                    <Route path="customers/:id" element={<CustomerDetail />} />
+                    <Route path="customers/:id/ledger" element={<CustomerLedger />} />
                     <Route path="expenses" element={<Expenses />} />
                     <Route path="reports" element={<Reports />} />
                     <Route path="settings" element={<Settings />} />

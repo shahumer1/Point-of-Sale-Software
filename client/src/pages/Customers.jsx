@@ -190,10 +190,13 @@ import { useTranslation } from 'react-i18next';
 import api from '../utils/api';
 import { Plus, Edit, Trash2, Search } from 'lucide-react';
 import Modal from '../components/Modal';
+import { Link } from 'react-router-dom';
+import ReceivePaymentModal from '../components/ReceivePaymentModal';
 import { useAuth } from '../context/AuthContext';
 
 const Customers = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dir = i18n.dir();
   const { user } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
@@ -201,6 +204,12 @@ const Customers = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentCustomer, setCurrentCustomer] = useState(null);
   const [formData, setFormData] = useState({ name: '', phone: '', address: '' });
+
+  // Receive Payment Modal
+  const [isPayOpen, setIsPayOpen] = useState(false);
+  const [payCustomerId, setPayCustomerId] = useState(null);
+
+  const openPayment = (customerId) => { setPayCustomerId(customerId); setIsPayOpen(true); };
 
   useEffect(() => {
     fetchCustomers();
@@ -278,13 +287,14 @@ const Customers = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            <Search className={`absolute ${dir === 'rtl' ? 'right-3' : 'left-3'} top-2.5 h-5 w-5 text-gray-400`} aria-hidden />
             <input
               type="text"
               placeholder={t('search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="pl-10 pr-10 w-full border border-gray-300 dark:border-gray-600 rounded-md py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              aria-label={t('search')}
             />
           </div>
         </div>
@@ -306,18 +316,23 @@ const Customers = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{customer.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{customer.phone}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{customer.address}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">Rs {customer.balance}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium ">
+                    <Link to={`/customers/${customer._id}`} className={`${customer.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>Rs {customer.balance}</Link>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {user?.role === 'admin' && (
-                      <>
-                        <button onClick={() => openModal(customer)} className="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 mr-4">
-                          <Edit size={18} />
-                        </button>
-                        <button onClick={() => handleDelete(customer._id)} className="text-red-600 hover:text-red-900 dark:hover:text-red-400">
-                          <Trash2 size={18} />
-                        </button>
-                      </>
-                    )}
+                    <div className="flex items-center justify-end">
+                      <button onClick={() => openPayment(customer._id)} aria-label={t('receive_payment')} className="text-green-600 hover:text-green-800 mr-4 focus:outline-none focus:ring-2 focus:ring-green-400 rounded">{t('receive_payment')}</button>
+                      {user?.role === 'admin' && (
+                        <>
+                          <button onClick={() => openModal(customer)} aria-label={t('edit')} className="text-indigo-600 hover:text-indigo-900 dark:hover:text-indigo-400 mr-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded">
+                            <Edit size={18} />
+                          </button>
+                          <button onClick={() => handleDelete(customer._id)} aria-label={t('delete')} className="text-red-600 hover:text-red-900 dark:hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-400 rounded">
+                            <Trash2 size={18} />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -367,6 +382,14 @@ const Customers = () => {
           </div>
         </form>
       </Modal>
+
+      <ReceivePaymentModal
+        isOpen={isPayOpen}
+        onClose={() => setIsPayOpen(false)}
+        customerId={payCustomerId}
+        onSuccess={() => { setIsPayOpen(false); fetchCustomers(); }}
+      />
+
     </div>
   );
 };

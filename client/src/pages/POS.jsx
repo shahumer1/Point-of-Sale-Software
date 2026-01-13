@@ -385,6 +385,23 @@ const POS = () => {
 
   const handleCheckout = async () => {
     try {
+      // Basic validations
+      if (!cart || cart.length === 0) {
+        alert('Cart is empty');
+        return;
+      }
+
+      // Validation: credit sales must have a customer
+      if (paymentMethod === 'Credit' && !selectedCustomer) {
+        alert('Please select a customer to record a credit sale.');
+        return;
+      }
+
+      const paidAmount = paymentMethod === 'Credit' ? 0 : total;
+
+      // Idempotency key to prevent duplicate server-side ledger/order duplication on retries
+      const idempotencyKey = `ORDER:${Date.now()}:${Math.random().toString(36).slice(2,10)}`;
+
       const orderData = {
         orderItems: cart.map(item => ({
           product: item._id,
@@ -396,7 +413,9 @@ const POS = () => {
         totalAmount: total,
         taxAmount,
         discountAmount: discount,
-        customerId: selectedCustomer ? selectedCustomer._id : null
+        customerId: selectedCustomer ? selectedCustomer._id : null,
+        paidAmount,
+        idempotencyKey,
       };
 
       await api.post('/orders', orderData);
@@ -412,7 +431,7 @@ const POS = () => {
       setSelectedCustomer(null);
     } catch (error) {
       console.error(error);
-      alert('Order Failed');
+      alert(error?.response?.data?.message || 'Order Failed');
     }
   };
 
@@ -544,13 +563,19 @@ const POS = () => {
             <option value="Cash">Cash</option>
             <option value="Card">Card</option>
             <option value="Online">Online</option>
+            <option value="Credit">Credit</option>
           </select>
+
+          {paymentMethod === 'Credit' && !selectedCustomer && (
+            <div className="text-sm text-red-500 mt-2">Please select a customer to record credit sales.</div>
+          )}
 
           <button
             onClick={handleCheckout}
-            className="w-full py-3 rounded-md font-bold bg-green-600 dark:bg-green-700 text-white"
+            disabled={paymentMethod === 'Credit' && !selectedCustomer}
+            className={`w-full py-3 rounded-md font-bold text-white ${paymentMethod === 'Credit' && !selectedCustomer ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 dark:bg-green-700'}`}
           >
-            Confirm Payment
+            {paymentMethod === 'Credit' ? `Record Credit (Rs ${total})` : 'Confirm Payment'}
           </button>
         </div>
       </Modal>
