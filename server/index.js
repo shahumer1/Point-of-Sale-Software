@@ -32,6 +32,10 @@ app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
+// ✅ Ledger routes for customer transactions
+const ledgerRoutes = require('./routes/ledgerRoutes'); // create this file
+app.use('/api/customers', ledgerRoutes); // ye app.use ke block me daal do
+
 
 const PORT = process.env.PORT || 5000;
 

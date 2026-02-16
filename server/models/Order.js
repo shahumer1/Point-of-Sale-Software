@@ -17,7 +17,8 @@ const orderSchema = mongoose.Schema({
     profit: { type: Number, required: true, default: 0 },
     taxAmount: { type: Number, default: 0 },
     discountAmount: { type: Number, default: 0 },
-    paymentMethod: { type: String, required: true, enum: ['Cash', 'Card', 'Online'] },
+paymentMethod: { type: String, required: true, enum: ['Cash', 'Card', 'Online', 'Credit'] },
+
     isPaid: { type: Boolean, default: true },
 }, {
     timestamps: true,
