@@ -1,216 +1,153 @@
-// const asyncHandler = require('express-async-handler');
-// const Order = require('../models/Order');
-// const Product = require('../models/Product'); // To update stock
-// const Customer = require('../models/Customer'); // To update balance
+const asyncHandler = require('express-async-handler');
+const Order = require('../models/Order');
+const Product = require('../models/Product');
+const Customer = require('../models/Customer');
 
-// // @desc    Create new order
-// // @route   POST /api/orders
-// // @access  Private (Staff/Admin)
-// const addOrderItems = asyncHandler(async (req, res) => {
-//     const {
-//         orderItems,
-//         paymentMethod,
-//         totalAmount,
-//         taxAmount,
-//         discountAmount,
-//         customerId
-//     } = req.body;
+// @desc    Create new order
+// @route   POST /api/orders
+// @access  Private (Staff/Admin)
+const addOrderItems = asyncHandler(async (req, res) => {
+    const {
+        items,
+        paymentMethod,
+        totalAmount,
+        taxAmount,
+        discountAmount,
+        customer
+    } = req.body;
 
-//     if (orderItems && orderItems.length === 0) {
-//         res.status(400);
-//         throw new Error('No order items');
-//         return;
-//     } else {
-//         let calculatedProfit = 0;
+    // Validate items array
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        res.status(400);
+        throw new Error('No order items');
+    }
 
-//         // Verify products and calculate profit
-//         for (const item of orderItems) {
-//             const product = await Product.findById(item.product);
-//             if (!product) {
-//                 res.status(404);
-//                 throw new Error(`Product not found: ${item.name}`);
-//             }
-//             if (product.stock < item.qty) {
-//                 res.status(400);
-//                 throw new Error(`Insufficient stock for ${product.name}`);
-//             }
+    // Validate basic fields
+    if (typeof totalAmount !== 'number' || totalAmount < 0) {
+        res.status(400);
+        throw new Error('Invalid totalAmount');
+    }
+    if (typeof taxAmount !== 'number' || taxAmount < 0) {
+        res.status(400);
+        throw new Error('Invalid taxAmount');
+    }
+    if (typeof discountAmount !== 'number' || discountAmount < 0) {
+        res.status(400);
+        throw new Error('Invalid discountAmount');
+    }
 
-//             // Calculate Profit per item: (Selling Price - Cost Price) * Quantity
-//             const itemProfit = (product.price - product.cost) * item.qty;
-//             calculatedProfit += itemProfit;
-
-//             // Deduct Stock
-//             product.stock = product.stock - item.qty;
-//             await product.save();
-//         }
-
-//         const order = new Order({
-//             customer: customerId,
-//             items: orderItems,
-//             paymentMethod,
-//             totalAmount,
-//             profit: calculatedProfit,
-//             taxAmount,
-//             discountAmount,
-//         });
-
-//         const createdOrder = await order.save();
-
-//         // update customer balance if credit/udhaar (Not fully implemented logic, assuming paid for now unless spec says otherwise, 
-//         // prompt says "Credit / loan system (Udhaar)", so maybe paymentMethod can be "Credit")
-//         if (paymentMethod === 'Credit' && customerId) {
-//             const customer = await Customer.findById(customerId);
-//             if (customer) {
-//                 customer.balance = customer.balance + totalAmount;
-//                 await customer.save();
-//             }
-//         }
-
-//         res.status(201).json(createdOrder);
-//     }
-// });
-
-// // @desc    Get order by ID
-// // @route   GET /api/orders/:id
-// // @access  Private
-// const getOrderById = asyncHandler(async (req, res) => {
-//     const order = await Order.findById(req.params.id).populate('customer', 'name email').populate('items.product', 'name price');
-
-//     if (order) {
-//         res.json(order);
-//     } else {
-//         res.status(404);
-//         throw new Error('Order not found');
-//     }
-// });
-
-// // @desc    Get all orders
-// // @route   GET /api/orders
-// // @access  Private/Admin
-// const getOrders = asyncHandler(async (req, res) => {
-//     const orders = await Order.find({}).populate('customer', 'id name').sort({ createdAt: -1 });
-//     res.json(orders);
-// });
-
-// module.exports = {
-//     addOrderItems,
-//     getOrderById,
-//     getOrders,
-// };
-
-
-
-    const asyncHandler = require('express-async-handler');
-    const Order = require('../models/Order');
-    const Product = require('../models/Product');
-    const Customer = require('../models/Customer');
-
-    // @desc    Create new order
-    // @route   POST /api/orders
-    // @access  Private (Staff/Admin)
-    const addOrderItems = asyncHandler(async (req, res) => {
-        const {
-            orderItems,
-            paymentMethod,
-            totalAmount,
-            taxAmount,
-            discountAmount,
-            customerId
-        } = req.body;
-
-        if (!orderItems || orderItems.length === 0) {
-            res.status(400);
-            throw new Error('No order items');
-        }
-
-        let calculatedProfit = 0;
-
-        // Verify products, calculate profit, update stock
-        for (const item of orderItems) {
-            const product = await Product.findById(item.product);
-            if (!product) {
-                res.status(404);
-                throw new Error(`Product not found: ${item.name}`);
-            }
-            if (product.stock < item.qty) {
-                res.status(400);
-                throw new Error(`Insufficient stock for ${product.name}`);
-            }
-
-            calculatedProfit += (product.price - product.cost) * item.qty;
-
-            product.stock -= item.qty;
-            await product.save();
-        }
-
-        // Create Order
-        const order = new Order({
-            customer: customerId || null,
-            items: orderItems,
-            paymentMethod,
-            totalAmount,
-            profit: calculatedProfit,
-            taxAmount,
-            discountAmount,
-            user: req.user._id,
-            isPaid: paymentMethod !== 'Credit' // Paid for Cash/Card/Online, unpaid for Credit
-        });
-
-        const createdOrder = await order.save();
-
-        // Credit handling
-if (paymentMethod === 'Credit' && customerId) {
-    const customer = await Customer.findById(customerId);
+    // If a customer id is provided, validate it exists
+    let customerDoc = null;
     if (customer) {
-        customer.balance += totalAmount;
+        customerDoc = await Customer.findById(customer);
+        if (!customerDoc) {
+            res.status(404);
+            throw new Error('Customer not found');
+        }
+    }
 
-        // Ensure creditHistory exists
-        customer.creditHistory = customer.creditHistory || [];
+    let calculatedProfit = 0;
+    const orderItems = [];
 
-        customer.creditHistory.push({
+    // Verify products, calculate profit, update stock
+    for (const item of items) {
+        if (!item.product) {
+            res.status(400);
+            throw new Error('Invalid product in items');
+        }
+        if (!item.qty || item.qty <= 0) {
+            res.status(400);
+            throw new Error(`Invalid quantity for ${item.name || item.product}`);
+        }
+        if (typeof item.price !== 'number' || item.price < 0) {
+            res.status(400);
+            throw new Error(`Invalid price for ${item.name || item.product}`);
+        }
+
+        const product = await Product.findById(item.product);
+        if (!product) {
+            res.status(404);
+            throw new Error(`Product not found: ${item.product}`);
+        }
+        if (product.stock < item.qty) {
+            res.status(400);
+            throw new Error(`Insufficient stock for ${product.name}`);
+        }
+
+        // Profit calculated using item price vs stored cost (server-authoritative)
+        calculatedProfit += (item.price - (product.cost || 0)) * item.qty;
+
+        // Decrease stock
+        product.stock -= item.qty;
+        await product.save();
+
+        orderItems.push({ product: product._id, name: item.name, qty: item.qty, price: item.price });
+    }
+
+    // Create Order (server computes profit)
+    const order = new Order({
+        customer: customer || null,
+        items: orderItems,
+        totalAmount,
+        profit: calculatedProfit,
+        taxAmount,
+        discountAmount,
+        paymentMethod,
+        isPaid: paymentMethod !== 'Credit'
+    });
+
+    const createdOrder = await order.save();
+
+    // If Credit payment and customer exists, update balance and credit history
+    if (paymentMethod === 'Credit' && customerDoc) {
+        customerDoc.balance += totalAmount;
+        customerDoc.creditHistory = customerDoc.creditHistory || [];
+        customerDoc.creditHistory.push({
             orderId: createdOrder._id,
             amount: totalAmount,
             note: 'Credit Sale',
-            createdBy: req.user._id
+            createdBy: req.user ? req.user._id : null
         });
-
-        await customer.save();
+        await customerDoc.save();
     }
-}
 
+    // Return populated order for frontend convenience
+    const populatedOrder = await Order.findById(createdOrder._id)
+        .populate('customer', 'name phone balance')
+        .populate('items.product', 'name sku price');
 
+    res.status(201).json(populatedOrder);
+});
 
-        res.status(201).json(createdOrder);
-    });
+// @desc    Get order by ID
+// @route   GET /api/orders/:id
+// @access  Private
+const getOrderById = asyncHandler(async (req, res) => {
+    const order = await Order.findById(req.params.id)
+        .populate('customer', 'name phone balance')
+        .populate('items.product', 'name price');
 
-    // @desc    Get order by ID
-    // @route   GET /api/orders/:id
-    // @access  Private
-    const getOrderById = asyncHandler(async (req, res) => {
-        const order = await Order.findById(req.params.id)
-            .populate('customer', 'name email balance')
-            .populate('items.product', 'name price');
+    if (order) {
+        res.json(order);
+    } else {
+        res.status(404);
+        throw new Error('Order not found');
+    }
+});
 
-        if (order) {
-            res.json(order);
-        } else {
-            res.status(404);
-            throw new Error('Order not found');
-        }
-    });
+// @desc    Get all orders
+// @route   GET /api/orders
+// @access  Private/Admin
+const getOrders = asyncHandler(async (req, res) => {
+    const orders = await Order.find({})
+        .populate('customer', 'name balance')
+        .sort({ createdAt: -1 });
 
-    // @desc    Get all orders
-    // @route   GET /api/orders
-    // @access  Private/Admin
-    const getOrders = asyncHandler(async (req, res) => {
-        const orders = await Order.find({})
-            .populate('customer', 'id name balance')
-            .sort({ createdAt: -1 });
-        res.json(orders);
-    });
+    res.json(orders);
+});
 
-    module.exports = {
-        addOrderItems,
-        getOrderById,
-        getOrders,
-    };
+module.exports = {
+    addOrderItems,
+    getOrderById,
+    getOrders,
+};

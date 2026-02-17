@@ -1,21 +1,4 @@
-// const mongoose = require('mongoose');
-
-// const customerSchema = mongoose.Schema({
-//     name: { type: String, required: true },
-//     phone: { type: String, required: true },
-//     address: { type: String },
-//     balance: { type: Number, default: 0 }, // Positive = Customer owes money, Negative = Advance
-// }, {
-//     timestamps: true,
-// });
-
-// const Customer = mongoose.model('Customer', customerSchema);
-
-// module.exports = Customer;
-
-
-
-const mongoose = require('mongoose');
+const mongoose = require('mongoose'); // <--- ye missing tha
 
 const creditHistorySchema = mongoose.Schema(
   {
@@ -33,10 +16,9 @@ const customerSchema = mongoose.Schema(
     phone: { type: String },
     address: { type: String },
     balance: { type: Number, default: 0 },
-    creditHistory: { type: [creditHistorySchema], default: [] } // ✅ Add default empty array
+    creditHistory: { type: [creditHistorySchema], default: [] }
   },
   { timestamps: true }
 );
 
 module.exports = mongoose.model('Customer', customerSchema);
-
