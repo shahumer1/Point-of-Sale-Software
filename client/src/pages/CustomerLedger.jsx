@@ -152,9 +152,9 @@ const CustomerLedger = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={handlePrintAll} className="px-3 py-1 bg-gray-800 text-white rounded text-sm">Print All</button>
+          <button onClick={handlePrintAll} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm">Print All</button>
           <button onClick={handlePrintFiltered} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm">Print Filtered</button>
-          <button onClick={() => fetchLedger()} className="px-3 py-1 bg-white border rounded text-sm">Refresh</button>
+          <button onClick={() => fetchLedger()} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm">Refresh</button>
         </div>
       </div>
 

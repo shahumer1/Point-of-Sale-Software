@@ -1,7 +1,8 @@
 const asyncHandler = require('express-async-handler');
 const Order = require('../models/Order');
+const Expense = require('../models/Expense');
 
-// @desc    Get sales report
+// @desc    Get sales report with Gross & Net Profit
 // @route   GET /api/reports/sales
 // @access  Private/Admin
 const getSalesReport = asyncHandler(async (req, res) => {
@@ -14,7 +15,7 @@ const getSalesReport = asyncHandler(async (req, res) => {
     let end = endDate ? new Date(endDate) : new Date();
     end.setHours(23, 59, 59, 999);
 
-    // 1. Aggregation for Totals
+    // 1. Aggregation for Order Stats (Gross Profit)
     const reportStats = await Order.aggregate([
         {
             $match: {
@@ -25,24 +26,66 @@ const getSalesReport = asyncHandler(async (req, res) => {
             $group: {
                 _id: null,
                 totalSales: { $sum: "$totalAmount" },
-                totalProfit: { $sum: "$profit" },
+                grossProfit: { $sum: "$profit" },
                 totalOrders: { $sum: 1 }
             }
         }
     ]);
 
-    // 2. Fetch detailed orders for the table
+    // 2. Get expenses for the period with breakdown by category
+    const expenseStats = await Expense.aggregate([
+        {
+            $match: {
+                date: { $gte: start, $lte: end }
+            }
+        },
+        {
+            $group: {
+                _id: "$category",
+                amount: { $sum: "$amount" },
+                count: { $sum: 1 }
+            }
+        },
+        {
+            $sort: { amount: -1 }
+        }
+    ]);
+
+    // 3. Get total expenses
+    const totalExpenseStats = await Expense.aggregate([
+        {
+            $match: {
+                date: { $gte: start, $lte: end }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                totalExpenses: { $sum: "$amount" }
+            }
+        }
+    ]);
+
+    // 4. Fetch detailed orders for the table
     const orders = await Order.find({
         createdAt: { $gte: start, $lte: end }
     })
         .populate('customer', 'name')
         .sort({ createdAt: -1 });
 
-    const stats = reportStats[0] || { totalSales: 0, totalProfit: 0, totalOrders: 0 };
+    const stats = reportStats[0] || { totalSales: 0, grossProfit: 0, totalOrders: 0 };
+    const totalExpenses = totalExpenseStats[0]?.totalExpenses || 0;
 
     res.json({
         period: { start, end },
-        summary: stats,
+        summary: {
+            totalSales: stats.totalSales,
+            grossProfit: stats.grossProfit,
+            totalExpenses: totalExpenses,
+            netProfit: stats.grossProfit - totalExpenses,
+            totalOrders: stats.totalOrders
+        },
+        expenseBreakdown: expenseStats,
         orders
     });
 });

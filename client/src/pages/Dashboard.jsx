@@ -170,7 +170,9 @@ const Dashboard = () => {
         totalSales: 0,
         totalOrders: 0,
         lowStockCount: 0,
-        estimatedProfit: 0,
+        grossProfit: 0,
+        netProfit: 0,
+        totalExpenses: 0,
         recentOrders: [],
     });
     const [loading, setLoading] = useState(true);
@@ -190,7 +192,9 @@ const Dashboard = () => {
                     totalSales: summary.totalSales,
                     totalOrders: summary.totalOrders,
                     lowStockCount: summary.lowStockCount,
-                    estimatedProfit: summary.estimatedProfit,
+                    grossProfit: summary.grossProfit,
+                    netProfit: summary.netProfit,
+                    totalExpenses: summary.totalExpenses,
                     recentOrders: orders.slice(0, 5),
                 });
             } catch (error) {
@@ -232,7 +236,7 @@ const Dashboard = () => {
         <div className="space-y-6">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{t('dashboard')}</h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <StatCard
                     title={t('total_sales')}
                     value={`Rs ${stats.totalSales.toLocaleString()}`}
@@ -252,10 +256,16 @@ const Dashboard = () => {
                     color="bg-yellow-500"
                 />
                 <StatCard
-                    title={t('estimated_profit')}
-                    value={`Rs ${stats.estimatedProfit.toLocaleString()}`}
+                    title="Gross Profit"
+                    value={`Rs ${(stats.grossProfit || 0).toLocaleString()}`}
                     icon={TrendingUp}
                     color="bg-purple-500"
+                />
+                <StatCard
+                    title="Net Profit"
+                    value={`Rs ${(stats.netProfit || 0).toLocaleString()}`}
+                    icon={TrendingUp}
+                    color="bg-indigo-500"
                 />
             </div>
 
